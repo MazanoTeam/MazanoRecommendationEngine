@@ -1,72 +1,49 @@
+from sentence_transformers import SentenceTransformer
 import pandas as pd
-import random
+import numpy as np
 
-from timeit import default_timer as timer
+class Recommendations:
+    def __init__(self, movie_title: str, model: SentenceTransformer, vectors: pd.DataFrame):
+        self.model = model
 
-class Movies:
-    def __init__(self, path_to_csv: str) -> None:
-        self.path_to_csv = path_to_csv
+        self.vectors = vectors
+        self.recommendations = list()
 
-        self.movies_overview, self.movies_tags = self.load_movies()
+        self.idx = vectors.index[vectors['original_title'] == movie_title].tolist()[0]
 
-    def load_movies(self):
-        return pd.read_pickle("datasets/movies/movies_overview.pkl"), pd.read_pickle("datasets/movies/movies_with_tags.pkl")
-        
+    def cosine_similarity(self, a, b):
+        dot_prod = np.dot(a, b.T)
 
-class MoviesRecommendation:
-    def __init__(self, Movies: Movies) -> None:
-        self.Movies = Movies
-        
-        self.cosine_similarity_overview, self.cosine_similarity_tags = self.get_cosine_similarity()
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+
+        return (dot_prod / (norm_a * norm_b))[0][0]
+
+    def get_similarities(self, row):
+        self.recommendations.append(
+            {
+                "original_title": row['original_title'],
+                "sim_score": self.cosine_similarity(self.vectors['overview'].iloc[self.idx], row['overview'])
+            }
+        )
+
+    def get_recommendations(self, n_films: int):
+        self.vectors.apply(self.get_similarities, axis=1)
+
+        self.recommendations = sorted(
+            self.recommendations,
+            key=lambda x: x['sim_score'],
+            reverse=True
+        )[1:n_films]
     
-    def get_cosine_similarity(self):
-        return pd.read_pickle("datasets/movies/cosine_similarity_overview.pkl"), pd.read_pickle("datasets/movies/cosine_similarity_tags.pkl")
-
-    def get_last_liked_movie_recommendations(self, movie, n_films: int, k: float = 0.5) -> list:
-        n_recommended_films = int((n_films * k)/2)
-        
-        indeces_overview = pd.Series(
-            data=self.Movies.movies_overview.index, 
-            index=self.Movies.movies_overview['original_title']
-        ).drop_duplicates()
-        
-        indeces_tags = pd.Series(
-            data=self.Movies.movies_tags.index, 
-            index=self.Movies.movies_tags['title']
-        ).drop_duplicates()
-
-        sim_scores_overview = enumerate(self.cosine_similarity_overview[indeces_overview[movie]])
-        sim_scores_tags = enumerate(self.cosine_similarity_tags[indeces_tags[movie]])
-
-        sim_scores_overview = sorted(sim_scores_overview, key=lambda x: x[1], reverse=True)[1:n_recommended_films]
-        sim_scores_tags = sorted(sim_scores_tags, key=lambda x: x[1], reverse=True)[1:n_recommended_films]
-        
-        sim_index_overview = [i[0] for i in sim_scores_overview]
-        sim_index_tags = [i[0] for i in sim_scores_tags]
-
-        movies_rec_by_overview = self.Movies.movies_overview['original_title'].iloc[sim_index_overview]
-        movies_rec_by_tags = self.Movies.movies_tags['title'].iloc[sim_index_tags]
-        
-        recommendations = [*movies_rec_by_overview, *movies_rec_by_tags]
-        
-        random_films = random.choices(self.Movies.movies_overview['original_title'], k=(n_films - len(recommendations)))
-        
-        recommendations = [*recommendations, *random_films]
-        
-        random.shuffle(recommendations)
-        
-        return recommendations
-
-
 if __name__ == "__main__":
-    start = timer()
-    
-    movies = Movies("datasets/movies/movies.csv")
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    print("Model loaded")
 
-    recommendations = MoviesRecommendation(movies)
+    movie_vectors = pd.read_pickle("dataset/movie_vectors.pkl")
+    print("Vectors loaded")
 
-    recs = recommendations.get_last_liked_movie_recommendations("Avatar", 80, k=0.8)
-    
-    end = timer()
-    print(recs)
-    print(end-start)
+    recs = Recommendations("Interstellar", model, movie_vectors)
+    recs.get_recommendations(25)
+
+    print(recs.recommendations)
