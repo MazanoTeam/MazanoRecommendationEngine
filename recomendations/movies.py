@@ -1,9 +1,8 @@
-import torch
 import pandas as pd
 import numpy as np
 
 class Recommendations:
-    def __init__(self, movie_title: str, model, vectors: pd.DataFrame):
+    def __init__(self, movie_title: list, model, vectors: pd.DataFrame):
         self.model = model
 
         self.vectors = vectors
@@ -35,3 +34,4 @@ class Recommendations:
             key=lambda x: x['sim_score'],
             reverse=True
         )[1:n_films]
+  
