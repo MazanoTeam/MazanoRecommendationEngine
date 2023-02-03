@@ -16,6 +16,8 @@ class Recommendations:
             for movie_title in movie_titles
         ][:5]
 
+        self.total_movie_titles = {movie['original_title'] for movie in self.total_movie_list}
+
     def cosine_similarity(self, a, b) -> float:
         dot_prod = np.dot(a, b.T)
 
@@ -44,13 +46,27 @@ class Recommendations:
             reverse=True
         )[len(self.liked_movie_vectors) : len_recommended_movies]
 
+        self.recommendations = list({
+            movie['original_title'] for movie in self.recommendations
+        })
+        
+        main_recommendations, other_recommendations = self.recommendations[:int(len_recommended_movies/5)], self.recommendations[int(len_recommended_movies/5):]
 
-        self.recommendations = [movie['original_title'] for movie in self.recommendations]
-
-        self.recommendations = [movie for movie in self.total_movie_list if movie['original_title'] in self.recommendations]
+        self.total_movie_titles = self.total_movie_titles.symmetric_difference(set(self.recommendations))
 
         len_random_movies = n_films - len(self.recommendations)
-        random_movies = random.sample(self.total_movie_list, len_random_movies)
+        random_movies = random.sample(list(self.total_movie_titles), len_random_movies)
 
-        self.recommendations = [*self.recommendations, *random_movies]
-  
+        main_recommendations = [*main_recommendations, *random_movies[:int(len_random_movies/2)]]
+        other_recommendations = [*other_recommendations, *random_movies[int(len_random_movies/2):]]
+
+        random.shuffle(main_recommendations)
+        random.shuffle(other_recommendations)
+
+        self.recommendations = [*main_recommendations, *other_recommendations]
+
+        self.recommendations = [
+            movie for movie in self.total_movie_list if movie['original_title'] in self.recommendations
+        ]
+
+        print(len(self.recommendations))
