@@ -4,3 +4,4 @@ python-dotenv
 pymongo
 numpy
 pandas
+uvicorn
