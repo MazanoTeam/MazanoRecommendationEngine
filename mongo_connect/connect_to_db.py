@@ -1,5 +1,4 @@
 from pymongo import MongoClient
-from dotenv import load_dotenv
 
 
 class LikesDB:
@@ -19,4 +18,11 @@ class LikesDB:
         
         except (IndexError, KeyError):
             return None
-        
+    
+class ItemsAPI:
+    def __init__(self, URI: str, db_name: str, collection_name: str):
+        self.client = MongoClient(URI)
+        self.database = self.client[db_name]
+        self.collection = self.database[collection_name]
+
+        self.items = list(self.collection.find({}, {"_id": 0}))
