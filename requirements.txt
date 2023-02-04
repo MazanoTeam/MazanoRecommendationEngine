@@ -1,0 +1,6 @@
+fastapi
+torch
+python-dotenv
+pymongo
+numpy
+pandas
