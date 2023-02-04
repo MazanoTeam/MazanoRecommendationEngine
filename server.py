@@ -19,7 +19,7 @@ app = FastAPI()
 load_dotenv()
 
 s = timeit.default_timer()
-MODEL = torch.load("recommendations\model\model.pt")
+MODEL = torch.load("./recommendations/model/model.pt")
 e = timeit.default_timer()
 print(f"Model loaded ({(e-s):.2f} s)")
 
@@ -33,7 +33,7 @@ MOVIES = ItemsAPI(os.environ['MONGO_URI_API'], "Mazano-API", "Films-API")
 e = timeit.default_timer()
 print(f"Items(Movies) loaded({(e-s):.2f} s)")
 
-MOVIE_VECTORS = pd.read_pickle("recommendations\dataset\movie_vectors.pkl")
+MOVIE_VECTORS = pd.read_pickle("./recommendations/dataset/movie_vectors.pkl")
 
 @app.get("/movies/get-recommendations")
 async def movie_recommendations(request: Request):
